@@ -32,3 +32,8 @@
 - [x] Teste de router params
 - [x] Teste de router rotinas
 - [x] Teste de router ações
+
+## Bugs
+- [x] Gerador de Conteúdo não autentica automaticamente via login principal do portal
+- [x] Gerador de Conteúdo falha ao carregar no iframe (erro a investigar)
+- [x] Criar página de redirecionamento elegante para o Gerador de Conteúdo (solução temporária)
