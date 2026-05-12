@@ -9,6 +9,8 @@ import {
   InsertManusaParams,
   InsertManusaRotina,
   InsertManusaAcao,
+  olimpoWorkflows,
+  olimpoOperadores,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -146,4 +148,32 @@ export async function insertManusaAcao(data: InsertManusaAcao) {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
   await db.insert(manusaAcoes).values(data);
+}
+
+// ─── Olimpo Workflows ─────────────────────────────────────────────────────────
+
+export async function getOlimpoWorkflows() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(olimpoWorkflows).orderBy(olimpoWorkflows.id);
+}
+
+export async function updateWorkflowStatus(
+  workflowId: string,
+  ultimoStatus: "ok" | "erro" | "pendente" | "desconhecido"
+) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db
+    .update(olimpoWorkflows)
+    .set({ ultimoStatus, ultimaExecucao: new Date() })
+    .where(eq(olimpoWorkflows.workflowId, workflowId));
+}
+
+// ─── Olimpo Operadores ────────────────────────────────────────────────────────
+
+export async function getOlimpoOperadores() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(olimpoOperadores).orderBy(olimpoOperadores.id);
 }

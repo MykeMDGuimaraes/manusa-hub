@@ -37,3 +37,13 @@
 - [x] Gerador de Conteúdo não autentica automaticamente via login principal do portal
 - [x] Gerador de Conteúdo falha ao carregar no iframe (erro a investigar)
 - [x] Criar página de redirecionamento elegante para o Gerador de Conteúdo (solução temporária)
+
+## Update Ecossistema Themis Bridge v1.0
+- [x] Adicionar tabela `olimpo_workflows` com os 7 workflows n8n reais
+- [x] Adicionar tabela `olimpo_operadores` com os 4 operadores do Olimpo
+- [x] Atualizar router com endpoints de saúde do Olimpo
+- [x] Atualizar página de Rotinas com dados reais dos 7 workflows n8n + links externos
+- [x] Criar página /olimpo com status dos 4 operadores e 7 workflows
+- [x] Adicionar link para n8n, Mike (Supabase) e ClickUp na sidebar
+- [x] Atualizar sidebar com item "Saúde do Olimpo"
+- [x] Atualizar App.tsx com rota /olimpo

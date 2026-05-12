@@ -10,6 +10,8 @@ import {
   LogOut,
   Zap,
   ChevronRight,
+  Activity,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/gerador", label: "Gerador de Conteúdo", icon: Video, desc: "Criação de Reels" },
   { href: "/supervisao", label: "Supervisão Manusa", icon: Eye, desc: "Pipeline de conteúdo" },
   { href: "/rotinas", label: "Controle de Rotinas", icon: Settings2, desc: "Automações e parâmetros" },
+  { href: "/olimpo", label: "Saúde do Olimpo", icon: Activity, desc: "Operadores e workflows" },
 ];
 
 function ManusaStatusDot() {
@@ -128,6 +131,29 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             );
           })}
         </nav>
+
+        {/* Quick Links */}
+        <div className="px-3 py-3 border-t border-sidebar-border">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">Ferramentas</p>
+          <div className="space-y-1">
+            {[
+              { label: "n8n — Workflows", href: "https://n8n.io", color: "text-orange-400" },
+              { label: "Mike — Supabase", href: "https://supabase.com", color: "text-green-400" },
+              { label: "ClickUp", href: "https://clickup.com", color: "text-purple-400" },
+            ].map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-sidebar-accent/50 transition-colors group"
+              >
+                <ExternalLink className={`w-3 h-3 flex-shrink-0 ${link.color}`} />
+                <span className={`text-xs truncate ${link.color}`}>{link.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
 
         {/* Bottom: Status + User */}
         <div className="px-3 py-4 border-t border-sidebar-border space-y-3">

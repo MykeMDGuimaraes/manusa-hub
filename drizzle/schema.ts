@@ -69,3 +69,36 @@ export const manusaAcoes = mysqlTable("manusa_acoes", {
 
 export type ManusaAcao = typeof manusaAcoes.$inferSelect;
 export type InsertManusaAcao = typeof manusaAcoes.$inferInsert;
+
+// Workflows do Olimpo (n8n)
+export const olimpoWorkflows = mysqlTable("olimpo_workflows", {
+  id: int("id").autoincrement().primaryKey(),
+  workflowId: varchar("workflowId", { length: 64 }).notNull().unique(),
+  nome: varchar("nome", { length: 128 }).notNull(),
+  descricao: text("descricao"),
+  cadencia: varchar("cadencia", { length: 128 }),
+  operador: mysqlEnum("operador", ["themis", "ares", "manusa", "jhon", "sistema"]).notNull().default("sistema"),
+  ativo: boolean("ativo").notNull().default(true),
+  ultimaExecucao: timestamp("ultimaExecucao"),
+  ultimoStatus: mysqlEnum("ultimoStatus", ["ok", "erro", "pendente", "desconhecido"]).notNull().default("desconhecido"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type OlimpoWorkflow = typeof olimpoWorkflows.$inferSelect;
+export type InsertOlimpoWorkflow = typeof olimpoWorkflows.$inferInsert;
+
+// Operadores do Olimpo
+export const olimpoOperadores = mysqlTable("olimpo_operadores", {
+  id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 32 }).notNull().unique(),
+  nome: varchar("nome", { length: 64 }).notNull(),
+  papel: varchar("papel", { length: 128 }).notNull(),
+  cerebro: varchar("cerebro", { length: 128 }),
+  camada: varchar("camada", { length: 64 }),
+  status: mysqlEnum("status", ["online", "offline", "degradado", "desconhecido"]).notNull().default("desconhecido"),
+  ultimaAtividade: timestamp("ultimaAtividade"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type OlimpoOperador = typeof olimpoOperadores.$inferSelect;
+export type InsertOlimpoOperador = typeof olimpoOperadores.$inferInsert;

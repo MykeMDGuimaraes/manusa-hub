@@ -9,6 +9,7 @@ import DashboardPage from "./pages/DashboardPage";
 import GeradorPage from "./pages/GeradorPage";
 import SupervisaoPage from "./pages/SupervisaoPage";
 import RotinasPage from "./pages/RotinasPage";
+import OlimpoPage from "./pages/OlimpoPage";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
         <Route path="/gerador" component={GeradorPage} />
         <Route path="/supervisao" component={SupervisaoPage} />
         <Route path="/rotinas" component={RotinasPage} />
+        <Route path="/olimpo" component={OlimpoPage} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

@@ -11,6 +11,9 @@ import {
   updateRotinaUltimaExecucao,
   getManusaAcoes,
   insertManusaAcao,
+  getOlimpoWorkflows,
+  getOlimpoOperadores,
+  updateWorkflowStatus,
 } from "./db";
 
 const MANUS_API_BASE = "https://api.manus.ai/v2";
@@ -139,6 +142,20 @@ export const appRouter = router({
         return { online: false, rotinasAtivas: 0, totalRotinas: 0 };
       }
     }),
+  }),
+
+  olimpo: router({
+    workflows: protectedProcedure.query(async () => getOlimpoWorkflows()),
+    operadores: protectedProcedure.query(async () => getOlimpoOperadores()),
+    updateWorkflow: protectedProcedure
+      .input(z.object({
+        workflowId: z.string(),
+        ultimoStatus: z.enum(["ok", "erro", "pendente", "desconhecido"]),
+      }))
+      .mutation(async ({ input }) => {
+        await updateWorkflowStatus(input.workflowId, input.ultimoStatus);
+        return { success: true };
+      }),
   }),
 });
 
