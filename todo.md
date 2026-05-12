@@ -64,7 +64,7 @@
 - [x] Página `/api-keys` no portal para gerenciar keys (criar, revogar, ver última utilização)
 - [x] Seção de pautas recebidas do Themis na página /api-keys
 - [x] Item "API Keys" adicionado à sidebar de navegação
-- [ ] Testes Vitest para middleware e endpoints Themis
+- [x] Testes Vitest para middleware e endpoints Themis (13 testes)
 
 ## Refinamentos futuros (backlog)
 - [ ] Adicionar campo `canal` em `themis_pautas` e validar payload 4D completo em `POST /api/themis/pauta`
