@@ -10,6 +10,7 @@ import GeradorPage from "./pages/GeradorPage";
 import SupervisaoPage from "./pages/SupervisaoPage";
 import RotinasPage from "./pages/RotinasPage";
 import OlimpoPage from "./pages/OlimpoPage";
+import ApiKeysPage from "./pages/ApiKeysPage";
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
         <Route path="/supervisao" component={SupervisaoPage} />
         <Route path="/rotinas" component={RotinasPage} />
         <Route path="/olimpo" component={OlimpoPage} />
+        <Route path="/api-keys" component={ApiKeysPage} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

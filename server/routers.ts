@@ -14,6 +14,10 @@ import {
   getOlimpoWorkflows,
   getOlimpoOperadores,
   updateWorkflowStatus,
+  listApiKeys,
+  createApiKey,
+  revokeApiKey,
+  listThemisPautas,
 } from "./db";
 
 const MANUS_API_BASE = "https://api.manus.ai/v2";
@@ -156,6 +160,46 @@ export const appRouter = router({
         await updateWorkflowStatus(input.workflowId, input.ultimoStatus);
         return { success: true };
       }),
+  }),
+
+  // ─── API Keys (gerenciamento via portal) ─────────────────────────────────────
+  apiKeys: router({
+    list: protectedProcedure.query(async () => listApiKeys()),
+
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1).max(128),
+        owner: z.string().max(64).optional().default("themis"),
+      }))
+      .mutation(async ({ input }) => {
+        const crypto = await import("crypto");
+        const rawKey = `mhk_${crypto.randomBytes(24).toString("hex")}`;
+        const prefix = rawKey.slice(0, 12);
+        const hash = crypto.createHash("sha256").update(rawKey).digest("hex");
+        await createApiKey({
+          name: input.name,
+          keyHash: hash,
+          keyPrefix: prefix,
+          owner: input.owner,
+          ativa: true,
+        });
+        // Retorna a key completa APENAS neste momento — não é armazenada em texto puro
+        return { rawKey, prefix, name: input.name };
+      }),
+
+    revoke: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await revokeApiKey(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Themis (pautas recebidas via REST) ───────────────────────────────────────
+  themis: router({
+    pautas: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).optional().default(50) }).optional())
+      .query(async ({ input }) => listThemisPautas(input?.limit ?? 50)),
   }),
 });
 

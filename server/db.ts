@@ -11,6 +11,9 @@ import {
   InsertManusaAcao,
   olimpoWorkflows,
   olimpoOperadores,
+  apiKeys,
+  themisPautas,
+  InsertApiKey,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -170,10 +173,51 @@ export async function updateWorkflowStatus(
     .where(eq(olimpoWorkflows.workflowId, workflowId));
 }
 
-// ─── Olimpo Operadores ────────────────────────────────────────────────────────
-
+// ─── // ─── Olimpo Operadores ──────────────────────────────────────────────────
 export async function getOlimpoOperadores() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(olimpoOperadores).orderBy(olimpoOperadores.id);
+}
+
+// ─── API Keys ─────────────────────────────────────────────────────────────
+export async function listApiKeys() {
+  const db = await getDb();
+  if (!db) return [];
+  // Nunca retorna o hash completo
+  return db
+    .select({
+      id: apiKeys.id,
+      name: apiKeys.name,
+      keyPrefix: apiKeys.keyPrefix,
+      owner: apiKeys.owner,
+      ativa: apiKeys.ativa,
+      lastUsedAt: apiKeys.lastUsedAt,
+      createdAt: apiKeys.createdAt,
+    })
+    .from(apiKeys)
+    .orderBy(apiKeys.createdAt);
+}
+
+export async function createApiKey(data: InsertApiKey) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db.insert(apiKeys).values(data);
+}
+
+export async function revokeApiKey(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db.update(apiKeys).set({ ativa: false }).where(eq(apiKeys.id, id));
+}
+
+// ─── Themis Pautas ─────────────────────────────────────────────────────────
+export async function listThemisPautas(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(themisPautas)
+    .orderBy(desc(themisPautas.criadoEm))
+    .limit(limit);
 }

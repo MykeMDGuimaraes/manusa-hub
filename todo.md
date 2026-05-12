@@ -47,3 +47,27 @@
 - [x] Adicionar link para n8n, Mike (Supabase) e ClickUp na sidebar
 - [x] Atualizar sidebar com item "Saúde do Olimpo"
 - [x] Atualizar App.tsx com rota /olimpo
+
+## API Themis (comunicação sem OAuth)
+- [x] Tabela `api_keys` no schema (id, name, key_hash, owner, created_at, last_used_at, active)
+- [x] Tabela `themis_pautas` no schema (id, externalId, titulo, pilar, icp, faseTeia, ancora, textoAres, modoPublicacao, status, metadados)
+- [x] Middleware Express de autenticação por API key (`/api/themis/*`)
+- [x] Endpoint POST `/api/themis/pauta` — receber pauta aprovada com payload 4D
+- [x] Endpoint POST `/api/themis/recalibracao` — enviar ajustes de score para Manusa
+- [x] Endpoint POST `/api/themis/briefing-criativo` — solicitar geração de criativo
+- [x] Endpoint GET `/api/themis/status` — consultar status das rotinas e campanhas
+- [x] Endpoint POST `/api/themis/acao` — registrar ação A1/A2/A3 no histórico
+- [x] Endpoint GET `/api/themis/feedback` — obter último YAML de feedback semanal
+- [x] Endpoint GET `/api/themis/pautas` — listar pautas registradas
+- [x] Router tRPC: apiKeys (list, create, revoke)
+- [x] Router tRPC: themis (pautas)
+- [x] Página `/api-keys` no portal para gerenciar keys (criar, revogar, ver última utilização)
+- [x] Seção de pautas recebidas do Themis na página /api-keys
+- [x] Item "API Keys" adicionado à sidebar de navegação
+- [ ] Testes Vitest para middleware e endpoints Themis
+
+## Refinamentos futuros (backlog)
+- [ ] Adicionar campo `canal` em `themis_pautas` e validar payload 4D completo em `POST /api/themis/pauta`
+- [ ] Validar `icp` em `POST /api/themis/recalibracao` contra enum permitido e retornar erro quando nenhum parâmetro for atualizado
+- [ ] Expandir `GET /api/themis/status` para incluir dados de campanhas ativas (via Meta Ads API)
+- [ ] Persistir feedback semanal em tabela dedicada e fazer `GET /api/themis/feedback` retornar o último YAML real

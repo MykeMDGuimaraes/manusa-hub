@@ -102,3 +102,39 @@ export const olimpoOperadores = mysqlTable("olimpo_operadores", {
 
 export type OlimpoOperador = typeof olimpoOperadores.$inferSelect;
 export type InsertOlimpoOperador = typeof olimpoOperadores.$inferInsert;
+
+// API Keys para integração Themis sem OAuth
+export const apiKeys = mysqlTable("api_keys", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  keyHash: varchar("keyHash", { length: 256 }).notNull().unique(),
+  keyPrefix: varchar("keyPrefix", { length: 16 }).notNull(),
+  owner: varchar("owner", { length: 64 }).notNull().default("themis"),
+  ativa: boolean("ativa").notNull().default(true),
+  lastUsedAt: timestamp("lastUsedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = typeof apiKeys.$inferInsert;
+
+// Pautas recebidas do Themis
+export const themisPautas = mysqlTable("themis_pautas", {
+  id: int("id").autoincrement().primaryKey(),
+  externalId: varchar("externalId", { length: 128 }).unique(),
+  titulo: varchar("titulo", { length: 256 }).notNull(),
+  pilar: varchar("pilar", { length: 64 }),
+  icp: varchar("icp", { length: 64 }),
+  faseTeia: varchar("faseTeia", { length: 32 }),
+  ancora: varchar("ancora", { length: 64 }),
+  textoAres: text("textoAres"),
+  modoPublicacao: mysqlEnum("modoPublicacao", ["organico", "pago", "hibrido"]).default("hibrido"),
+  status: mysqlEnum("status", ["recebida", "em_campanha", "publicada", "pausada", "rejeitada"]).notNull().default("recebida"),
+  metadados: json("metadados"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ThemisPauta = typeof themisPautas.$inferSelect;
+export type InsertThemisPauta = typeof themisPautas.$inferInsert;

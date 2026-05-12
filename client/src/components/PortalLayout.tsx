@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Activity,
   ExternalLink,
+  KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/supervisao", label: "Supervisão Manusa", icon: Eye, desc: "Pipeline de conteúdo" },
   { href: "/rotinas", label: "Controle de Rotinas", icon: Settings2, desc: "Automações e parâmetros" },
   { href: "/olimpo", label: "Saúde do Olimpo", icon: Activity, desc: "Operadores e workflows" },
+  { href: "/api-keys", label: "API Keys", icon: KeyRound, desc: "Integração Themis" },
 ];
 
 function ManusaStatusDot() {
