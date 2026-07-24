@@ -89,7 +89,11 @@ export function registerDashGateway(app: Express): void {
     return;
   }
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const host = (req.headers.host ?? "").split(":")[0].toLowerCase();
+    // O edge da Manus reescreve Host para o hostname interno — o domínio
+    // público original chega em X-Forwarded-Host (prioridade), com Host
+    // como fallback (acesso direto, dev local).
+    const forwarded = String(req.headers["x-forwarded-host"] ?? "").split(",")[0].trim();
+    const host = (forwarded || String(req.headers.host ?? "")).split(":")[0].toLowerCase();
     if (host !== PUBLIC_DOMAIN) return next();
 
     proxyToDash(req, res).catch((error) => {
@@ -101,5 +105,5 @@ export function registerDashGateway(app: Express): void {
       }
     });
   });
-  console.log(`[gateway] ${PUBLIC_DOMAIN} → ${targetBase()} (host-conditional)`);
+  console.log(`[gateway] ${PUBLIC_DOMAIN} → ${targetBase()} (host-conditional, x-forwarded-host aware)`);
 }
