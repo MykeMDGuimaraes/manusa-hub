@@ -89,18 +89,6 @@ export function registerDashGateway(app: Express): void {
     return;
   }
 
-  // TEMPORÁRIO (diagnóstico de headers do edge — remover após validação)
-  app.use("/__gateway-debug", (req: Request, res: Response) => {
-    res.json({
-      host: req.headers.host ?? null,
-      xForwardedHost: req.headers["x-forwarded-host"] ?? null,
-      forwarded: req.headers.forwarded ?? null,
-      xOriginalHost: req.headers["x-original-host"] ?? null,
-      xForwardedServer: req.headers["x-forwarded-server"] ?? null,
-      allHeaders: req.headers,
-    });
-  });
-
   app.use((req: Request, res: Response, next: NextFunction) => {
     // O edge da Manus reescreve Host para o hostname interno — o domínio
     // público original chega em X-Forwarded-Host (prioridade), com Host
