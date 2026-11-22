@@ -1,0 +1,34 @@
+# Guarda de segredo (Dia Solutions). Varre as linhas que cada push e cada pull request
+# adicionam, venha o commit de onde vier: agente que commita na nuvem não passa pelos
+# hooks do notebook. Mesma varredura dos hooks (cópia em scripts/guarda-segredo).
+# Sem proteção de branch, ele não barra o push: reprova o CI e, no push, abre (ou
+# comenta) a issue de alerta para o dono.
+# Repositório público: roda no runner do GitHub, nunca no da VPS, porque o pull request
+# de um fork executaria código de fora na VPS.
+name: guarda-segredo
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  guarda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Varrer os commits do evento
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I scripts/guarda-segredo/ci.py
+      - name: Teste do ataque (token da Meta em .manus/db, chave do Freepik em .md)
+        if: success() || failure()
+        run: python3 -I scripts/guarda-segredo/test_guarda_segredo.py
