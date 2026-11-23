@@ -10,11 +10,13 @@ Nunca imprime valor: só commit (8 caracteres), arquivo, linha e regra.
 
 Sem proteção de branch, o guarda não barra o push. Ele reprova o CI e, no push,
 abre a issue de alerta para o dono do repositório (ou comenta na que já estiver
-aberta). Para isso precisa de GH_TOKEN com permissão de escrever issue.
+aberta). Para isso precisa de GH_TOKEN com permissão de escrever issue. Só o
+aviso usa o token: o git e o varredor rodam com o ambiente sem ele.
 
 Uso, no Actions (que define GITHUB_EVENT_NAME e GITHUB_EVENT_PATH):
   python3 -I scripts/guarda-segredo/ci.py
-Sai com 0 se limpo, 1 se achou algo, 2 se não conseguiu varrer.
+Sai com 0 se limpo, 1 se achou algo, 2 se não conseguiu varrer (inclusive quando
+o varredor quebra: saída 1 sem achado nenhum é erro dele, não segredo).
 """
 import json
 import os
@@ -32,10 +34,37 @@ TITULO = "[guarda-segredo]"
 ACHADO = re.compile(r"^  \S{8} .+  \[.+\]$")  # "  <commit> <arquivo>[:<linha>]  [<regra>]"
 # Aviso do casa-segredos.py feito para o notebook; no CI a lista de prefixos reais nunca existe.
 AVISO_DO_NOTEBOOK = ("casa-segredos: lista de prefixos reais ausente", "Rode o instalar.sh do dia-casa")
+TOKENS = ("GH_TOKEN", "GITHUB_TOKEN")
+
+
+def sem_token(env):
+    """Ambiente dos subprocessos: o git e o varredor não precisam do token do job, que fica só com o avisar()."""
+    return {k: v for k, v in env.items() if k not in TOKENS}
+
+
+def codigo(texto):
+    """Trecho de código inline que o próprio texto não fecha: o delimitador tem uma crase a mais que a maior
+    sequência de crases do texto (CommonMark). Dentro de código, '@' não vira menção nem o texto vira markdown."""
+    texto = " ".join(str(texto).split())
+    cerca = "`" * (max((len(s) for s in re.findall(r"`+", texto)), default=0) + 1)
+    return f"{cerca} {texto} {cerca}"
+
+
+def bloco(linhas):
+    """Bloco de código que nenhuma das linhas fecha: a cerca é maior que a maior sequência de crases delas."""
+    maior = max((len(s) for linha in linhas for s in re.findall(r"`+", linha)), default=0)
+    cerca = "`" * max(3, maior + 1)
+    return [cerca, *linhas, cerca]
+
+
+def no_titulo(texto, limite=60):
+    """Texto vindo de quem empurrou, no título da issue: só letra, dígito, '.', '/', '_' e '-'."""
+    return re.sub(r"[^\w./-]", "_", str(texto))[:limite]
 
 
 def existe(ref):
-    r = subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], capture_output=True)
+    r = subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], capture_output=True,
+                       env=sem_token(os.environ))
     return r.returncode == 0
 
 
@@ -71,14 +100,13 @@ def avisar(dados, achados, env, abrir=urllib.request.urlopen):
     ref = (dados.get("ref") or "").removeprefix("refs/heads/")
     ate = (dados.get("after") or "")[:8]
     quem = (dados.get("pusher") or {}).get("name") or env.get("GITHUB_ACTOR") or "?"
+    # Branch, autor e nome de arquivo vêm de quem empurrou: são dado, vão dentro de código, nunca como markdown.
     corpo = "\n".join([
-        f"O guarda de segredo reprovou o push em `{ref}` (até `{ate}`), feito por `{quem}`.",
+        f"O guarda de segredo reprovou o push em {codigo(ref)} (até {codigo(ate)}), feito por {codigo(quem)}.",
         "",
         "Achados (o valor fica de fora de propósito):",
         "",
-        "```",
-        *[a.strip() for a in achados],
-        "```",
+        *bloco([a.strip() for a in achados]),
         "",
         "O que fazer: tire o valor do código e leia do ambiente ou do cofre. Segredo que chegou ao GitHub "
         "está queimado: rotacione, apagar o commit não basta. O dump `.manus/` fica fora do git (`.gitignore`).",
@@ -102,7 +130,7 @@ def avisar(dados, achados, env, abrir=urllib.request.urlopen):
         if aberta:
             pedir("POST", f"/repos/{repo}/issues/{aberta['number']}/comments", {"body": corpo})
             return f"guarda-segredo: comentei na issue de alerta #{aberta['number']}"
-        pedido = {"title": f"{TITULO} achado no push em {ref} ({ate})", "body": corpo}
+        pedido = {"title": f"{TITULO} achado no push em {no_titulo(ref)} ({no_titulo(ate, 8)})", "body": corpo}
         if dono:
             pedido["assignees"] = [dono]
         nova = pedir("POST", f"/repos/{repo}/issues", pedido)
@@ -131,7 +159,8 @@ def main():
     if not args:
         print("guarda-segredo: branch apagada, nada a varrer")
         return 0
-    contagem = subprocess.run(["git", "rev-list", "--count", *args], capture_output=True, text=True)
+    contagem = subprocess.run(["git", "rev-list", "--count", *args], capture_output=True, text=True,
+                              env=sem_token(os.environ))
     if contagem.returncode != 0:
         sys.stderr.write(contagem.stderr)
         print(f"guarda-segredo: não consegui listar os commits ({' '.join(args)})", file=sys.stderr)
@@ -140,14 +169,18 @@ def main():
     print(f"guarda-segredo: evento {evento}, {n} commit(s) a varrer: {' '.join(args)}")
     print("guarda-segredo: no CI rodam os padrões genéricos; a lista de prefixos reais da casa não sai do notebook")
     r = subprocess.run([sys.executable, "-I", str(VARREDOR), "--range", *args], capture_output=True,
-                       text=True, encoding="utf-8", errors="replace")
+                       text=True, encoding="utf-8", errors="replace", env=sem_token(os.environ))
     sys.stdout.write(r.stdout)
     for linha in r.stderr.splitlines():
         if not linha.startswith(AVISO_DO_NOTEBOOK):
             print(linha, file=sys.stderr)
     if r.returncode == 1:
+        achados = [linha for linha in r.stderr.splitlines() if ACHADO.match(linha)]
+        if not achados:  # exceção sem tratamento também sai com 1: é erro do varredor, não segredo
+            print("guarda-segredo: o varredor saiu com 1 sem achado nenhum; é erro dele, não segredo, "
+                  "e não abri issue", file=sys.stderr)
+            return 2
         if evento == "push":
-            achados = [linha for linha in r.stderr.splitlines() if ACHADO.match(linha)]
             print(avisar(dados, achados, os.environ), file=sys.stderr)
         return 1
     if r.returncode == 0:

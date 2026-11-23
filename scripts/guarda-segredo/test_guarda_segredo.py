@@ -10,12 +10,17 @@ Cada caso monta um repositório descartável numa pasta temporária, com HOME va
 configuração global e a de sistema do git desligadas (sem hook nenhum, como chega o commit da
 nuvem), e roda o ci.py com um evento do Actions de mentira.
 
+Também da revisão da lei 11: varredor que quebra não vira alerta, o token do job não chega ao
+varredor, e branch, autor e nome de arquivo de quem empurrou não viram markdown na issue.
+
     python3 -I scripts/guarda-segredo/test_guarda_segredo.py
 """
 import importlib.util
 import json
 import os
+import re
 import secrets
+import shutil
 import string
 import subprocess
 import sys
@@ -93,10 +98,10 @@ class Repositorio:
         self.git("commit", "-q", "-m", "agente: " + ", ".join(arquivos))
         return self.git("rev-parse", "HEAD")
 
-    def guarda(self, evento, dados):
+    def guarda(self, evento, dados, ci=CI, extra=None):
         self.evento.write_text(json.dumps(dados), encoding="utf-8")
-        env = dict(self.env, GITHUB_EVENT_NAME=evento, GITHUB_EVENT_PATH=str(self.evento))
-        r = subprocess.run([sys.executable, "-I", str(CI)], cwd=self.raiz, env=env, capture_output=True,
+        env = dict(self.env, GITHUB_EVENT_NAME=evento, GITHUB_EVENT_PATH=str(self.evento), **(extra or {}))
+        r = subprocess.run([sys.executable, "-I", str(ci)], cwd=self.raiz, env=env, capture_output=True,
                            text=True, encoding="utf-8", errors="replace", timeout=120)
         return r.returncode, r.stdout + r.stderr
 
@@ -182,6 +187,40 @@ class AtaqueTest(unittest.TestCase):
         self.assertTrue("nada a varrer" in saida, "faltou a linha de branch apagada")
 
 
+class VarredorDeMentiraTest(unittest.TestCase):
+    """O ci.py de verdade ao lado de um casa-segredos.py de mentira, num repositório descartável."""
+
+    def setUp(self):
+        pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(pasta.cleanup)
+        raiz = Path(pasta.name)
+        self.repo = Repositorio(raiz)
+        self.scripts = raiz / "scripts"
+        self.scripts.mkdir()
+        shutil.copy(CI, self.scripts / "ci.py")
+        base = self.repo.commit({"README.md": "# projeto\n"})
+        self.dados = push(base, self.repo.commit({"src/app.ts": "export {};\n"}))
+        # Se o ci.py chamar a API por engano, a chamada vai para uma porta fechada e falha na hora.
+        self.extra = {"GH_TOKEN": "token-de-teste", "GITHUB_API_URL": "http://127.0.0.1:9"}
+
+    def rodar(self, varredor):
+        (self.scripts / "casa-segredos.py").write_text(varredor, encoding="utf-8")
+        return self.repo.guarda("push", self.dados, ci=self.scripts / "ci.py", extra=self.extra)
+
+    def test_varredor_que_quebra_nao_vira_alerta(self):
+        codigo, saida = self.rodar("raise RuntimeError('quebrou')\n")
+        self.assertEqual(codigo, 2, "varredor que quebra é erro (2), não achado (1)")
+        self.assertIn("sem achado nenhum", saida)
+        self.assertNotIn("issue de alerta", saida)
+
+    def test_token_do_job_nao_chega_ao_varredor(self):
+        codigo, saida = self.rodar(
+            "import os\n"
+            "print('token no varredor:', 'sim' if {'GH_TOKEN', 'GITHUB_TOKEN'} & set(os.environ) else 'nao')\n")
+        self.assertEqual(codigo, 0)
+        self.assertIn("token no varredor: nao", saida)  # ASCII: o console do Windows troca o acento
+
+
 class FaixaTest(unittest.TestCase):
     A, B = "a" * 40, "b" * 40
 
@@ -193,6 +232,10 @@ class FaixaTest(unittest.TestCase):
 
     def test_branch_nova(self):
         self.assertEqual(ci.faixa("push", push(ZERO, self.B, "refs/heads/agente/x"), lambda ref: True),
+                         [self.B, "^origin/main"])
+
+    def test_tag_nova(self):
+        self.assertEqual(ci.faixa("push", push(ZERO, self.B, "refs/tags/v1"), lambda ref: True),
                          [self.B, "^origin/main"])
 
     def test_primeira_subida_da_padrao_varre_tudo(self):
@@ -261,6 +304,21 @@ class AvisoTest(unittest.TestCase):
         metodo, url, _, _ = self.pedidos[-1]
         self.assertEqual((metodo, url), ("POST", "https://api.github.com/repos/dono/repo/issues/3/comments"))
         self.assertIn("#3", msg)
+
+    def test_texto_de_quem_empurra_nao_vira_markdown(self):
+        dados = push("a" * 40, "b" * 40, ref="refs/heads/x`@dono`")
+        dados["pusher"]["name"] = "quem```"
+        achado = "abcdef12 .manus/a```b.json  [dump de sessão de agente (.manus/) versionado]"
+        ci.avisar(dados, ["  " + achado], self.ENV, abrir=self.abrir_falso([]))
+        _, _, corpo, _ = self.pedidos[-1]
+        self.assertNotRegex(corpo["title"], r"[`@]")
+        linhas = corpo["body"].splitlines()
+        abre = next(i for i, linha in enumerate(linhas) if re.fullmatch(r"`{3,}", linha))
+        fecha = linhas.index(linhas[abre], abre + 1)
+        self.assertEqual(len(linhas[abre]), 4, "a cerca tem de ser maior que as 3 crases do nome do arquivo")
+        self.assertEqual(linhas[abre + 1:fecha], [achado])
+        self.assertIn("`` x`@dono` ``", corpo["body"])
+        self.assertIn("```` quem``` ````", corpo["body"])
 
     def test_sem_token_diz_que_nao_avisou(self):
         msg = ci.avisar(push("a" * 40, "b" * 40), self.ACHADOS, {"GITHUB_REPOSITORY": "dono/repo"},
